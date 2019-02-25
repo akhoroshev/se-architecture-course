@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/akhoroshev/se-architecture-course.svg?branch=hw_01_dev)](https://travis-ci.org/akhoroshev/se-architecture-course)
+
 **Simple shell**
 
 ### Getting started
