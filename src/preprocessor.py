@@ -1,20 +1,30 @@
 from abc import ABC, abstractmethod
 from src.environment import IEnvironment
+from src.token import IToken, TokenDelimiter, TokenString
+
+from parsec import *
 import shlex
 
 
 class PreprocessorParseError(ValueError):
-    def __init__(self, string):
-        super().__init__(f"{string}: parse error")
+    def __init__(self, content):
+        super().__init__(f"{content}: parse error")
 
 
 class IPreprocessor(ABC):
     @abstractmethod
-    def process(self, string: str, environment: IEnvironment) -> [str]:
+    def set_environment(self, environment: IEnvironment) -> None:
+        pass
+
+    @abstractmethod
+    def get_environment(self) -> IEnvironment:
+        pass
+
+    @abstractmethod
+    def process(self, content: str) -> [IToken]:
         """
         Function split input string and make substitutions if needed
-        :param string: str
-        :param environment: IEnvironment
+        :param content:
         """
         pass
 
@@ -28,63 +38,76 @@ def create_preprocessor() -> IPreprocessor:
 ##################
 
 class PreprocessorImpl(IPreprocessor):
-    def process(self, string: str, environment: IEnvironment) -> [str]:
-        try:
-            whitespace_split = split_whitespace(string)
-            # print(f"whitespace_split: {whitespace_split}")
-            whitespace_splitted = [split_symbols(i) for i in whitespace_split]
-            # print(f"whitespace_splitted: {whitespace_splitted}")
-            whitespace_separated = merge_list(whitespace_splitted, " ")
-            # print(f"whitespace_separated: {whitespace_separated}")
-            return [PreprocessorImpl.lex_token(token, environment) for token in whitespace_separated]
-        except ValueError:
-            raise PreprocessorParseError(string)
+    def __init__(self):
+        self.m_environment = None
 
-    @staticmethod
-    def lex_token(string: str, environment: IEnvironment) -> str:
-        if string == " ":
-            return " "
-        result_token = str()
-        tokens = list(shlex.shlex(string))
-        tokens = [unquote(tok) for tok in tokens]
-        need_ref = False
-        for token in tokens:
-            if need_ref:
-                result_token += environment.get(token)
-            elif token != '$':
-                result_token += token
-            if token == '$':
-                need_ref = True
+    def set_environment(self, environment: IEnvironment) -> None:
+        self.m_environment = environment
+
+    def get_environment(self) -> IEnvironment:
+        return self.m_environment
+
+    def process(self, content: str) -> [IToken]:
+
+        def pure(value):
+            """
+            pure :: a -> m a
+            """
+            return Parser(lambda _, index: Value.success(index, value))
+
+        subst_comb = (string('$') >> many1(digit() | letter())).bind(lambda val: pure(self.make_subst(''.join(val))))
+        double_quotes_comb = (string('"') >> many(subst_comb ^ none_of('"')) << string('"')). \
+            parsecmap(''.join). \
+            parsecmap(TokenString)
+        single_quotes_comb = (string("'") >> many(none_of("'")) << string("'")). \
+            parsecmap(''.join). \
+            parsecmap(TokenString)
+        space_eat_comb = spaces() >> pure(TokenDelimiter())
+        any_char_comb = none_of(["'", '"', ' ']).parsecmap(TokenString)
+        subst_tokens_comb = subst_comb. \
+            parsecmap(shlex.split). \
+            parsecmap(lambda lst: map(TokenString, lst)). \
+            parsecmap(lambda lst: list(TokenDelimiter.join(lst)))
+
+        content_prs_comb = many(double_quotes_comb |
+                                single_quotes_comb |
+                                subst_tokens_comb ^ any_char_comb |
+                                space_eat_comb) < eof()
+
+        parsed_tokens = content_prs_comb.parse(content)
+        result = list()
+        for item in parsed_tokens:
+            if isinstance(item, list):
+                result.extend(item)
             else:
-                need_ref = False
-        if need_ref:
-            raise PreprocessorParseError(string)
-        return result_token
+                result.append(item)
+        return self.collapse_tokens(result)
 
+    def make_subst(self, value: str) -> str:
+        if self.get_environment().contains(value):
+            return self.get_environment().get(value)
+        else:
+            return str()
 
-def split_whitespace(string: str) -> [str]:
-    lex = shlex.shlex(string)
-    lex.whitespace_split = True
-    return list(lex)
-
-
-def split_symbols(string: str) -> [str]:
-    lex = shlex.shlex(string)
-    lex.wordchars += '$'
-    return list(lex)
-
-
-def unquote(string: str):
-    if string.startswith('"') or string.startswith("'"):
-        string = string[1:]
-
-    if string.endswith('"') or string.endswith("'"):
-        string = string[:-1]
-    return string
-
-
-def merge_list(lists, delimiter):
-    [i.append(delimiter) for i in lists[:-1]]
-    merged_list = list()
-    [merged_list.extend(i) for i in lists]
-    return merged_list
+    def collapse_tokens(self, tokens):
+        result = list()
+        current = None
+        for token in tokens:
+            if token.is_delimiter() and current is not None:
+                result.append(TokenString(current))
+                result.append(TokenDelimiter())
+                current = None
+            elif token.is_delimiter() and len(result) and result[-1] != TokenDelimiter():
+                result.append(TokenDelimiter())
+            if not token.is_delimiter() and token.get_content() in "|=":
+                if current is not None:
+                    result.append(TokenString(current))
+                    current = None
+                result.append(TokenString(token.get_content()))
+            elif not token.is_delimiter():
+                current = token.get_content() if current is None else current + token.get_content()
+        if current is not None:
+            result.append(TokenString(current))
+        if len(result) and result[-1] == TokenDelimiter():
+            del result[-1]
+        return result
