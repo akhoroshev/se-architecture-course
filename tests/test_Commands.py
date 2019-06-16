@@ -61,7 +61,7 @@ class TestCommands(TestCase):
         i, o = self.prepare_streams(cmd)
         cmd.execute()
         o.seek(0, 0)
-        self.assertTrue(o.read().endswith('/se-architecture-course/tests\n'))
+        self.assertTrue(o.read().endswith('tests\n'))
 
     def test_wc(self):
         cmd = Wc("wc")
