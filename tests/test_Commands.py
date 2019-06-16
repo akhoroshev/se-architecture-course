@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 
 from src.command import ICommand
@@ -61,7 +62,7 @@ class TestCommands(TestCase):
         i, o = self.prepare_streams(cmd)
         cmd.execute()
         o.seek(0, 0)
-        self.assertTrue(o.read().endswith('tests\n'))
+        self.assertEqual(os.getcwd() + '\n', o.read())
 
     def test_wc(self):
         cmd = Wc("wc")
