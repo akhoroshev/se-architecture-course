@@ -1,5 +1,5 @@
 from src.command import IFsCommand
-from os.path import join, isdir, split
+from os.path import join, isdir, split, abspath
 
 
 class Cd(IFsCommand):
@@ -21,7 +21,7 @@ class Cd(IFsCommand):
             IFsCommand.m_current_dir = split(IFsCommand.m_current_dir)[0]
             return
         if new_dir[0] != "/":
-            new_dir = join(IFsCommand.m_current_dir, new_dir)
+            new_dir = abspath(join(IFsCommand.m_current_dir, new_dir))
         if isdir(new_dir):
             IFsCommand.m_current_dir = new_dir
         else:
