@@ -3,7 +3,14 @@ from os.path import join, isdir, split
 
 
 class Cd(IFsCommand):
+    """
+    Cd command
+    """
     def execute(self) -> None:
+        """
+
+        :return:
+        """
         if len(self.m_args) > 1:
             print("too many arguments fo cd", file=self.m_out_stream)
             return
@@ -18,4 +25,4 @@ class Cd(IFsCommand):
         if isdir(new_dir):
             IFsCommand.m_current_dir = new_dir
         else:
-            print("Directory " + new_dir + " do not exists", file=self.m_out_stream)
+            print("Directory " + self.m_args[0] + " do not exists", file=self.m_out_stream)
