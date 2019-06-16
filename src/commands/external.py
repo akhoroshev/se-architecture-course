@@ -1,6 +1,7 @@
-from src.command import ICommand
 import subprocess
 from io import TextIOWrapper, BytesIO
+
+from src.command import ICommand
 
 
 class External(ICommand):

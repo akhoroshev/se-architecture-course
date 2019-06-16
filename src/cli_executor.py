@@ -1,7 +1,9 @@
+from typing import List, Callable, Any
+
+from src.command import ICommand
 from src.environment import create_environment
 from src.parser import create_parser
 from src.preprocessor import create_preprocessor
-from src.command import ICommand
 from src.stream import IStream, \
     create_string_stream, \
     get_stdout_stream, \
@@ -14,28 +16,23 @@ class CliExecutor:
         self.m_environment = create_environment()
         self.m_parser = create_parser()
         self.m_preprocessor = create_preprocessor()
+        self.m_preprocessor.set_environment(self.m_environment)
 
-    def add_command(self, command_constructor, name: str, infix: bool):
+    def add_command(self, command_factory: Callable[[str, Any], ICommand], name: str, infix: bool):
         """
         Associate a command with a name.
-        :param command_constructor: callable
-        :param name: str
-        :param infix: bool
         """
-        self.m_parser.add_command(command_constructor, name, infix)
+        self.m_parser.add_command(command_factory, name, infix)
 
     def set_default_command(self, command_constructor):
         """
         The default command if an unknown command has passed
-        :param command_constructor: callable
         """
         self.m_parser.set_default_command(command_constructor)
 
     def add_environment_variable(self, env, value):
         """
         Add env variable
-        :param env: str
-        :param value: str
         """
         self.m_environment.add(env, value)
 
@@ -47,7 +44,7 @@ class CliExecutor:
             try:
                 print("> ", end='', flush=True)
                 line = get_stdin_stream().readline()
-                token_array = self.m_preprocessor.process(line, self.m_environment)
+                token_array = self.m_preprocessor.process(line)
                 command_list = self.m_parser.parse(token_array)
                 CliExecutor.execute_command_list(command_list,
                                                  get_stdin_stream(),
@@ -62,15 +59,12 @@ class CliExecutor:
         self.m_should_stop = True
 
     @staticmethod
-    def execute_command_list(command_list: [ICommand], start_stream: IStream, end_stream: IStream):
+    def execute_command_list(command_list: List[ICommand], start_stream: IStream, end_stream: IStream):
         """
         Executing a list of commands with sequential linking of streams
-        :param command_list: [ICommand]
-        :param start_stream: input stream for fst command
-        :param end_stream: output stream for last command
         """
         last_idx = len(command_list) - 1
-        current_stream: IStream = None
+        current_stream = None
         for idx, command in enumerate(command_list):
             if idx == 0:
                 command.set_input_stream(start_stream)

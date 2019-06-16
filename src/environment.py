@@ -7,6 +7,9 @@ class VariableNotFoundError(LookupError):
 
 
 class IEnvironment(ABC):
+    """
+    Interface for holding environment variables
+    """
     @abstractmethod
     def add(self, variable: str, value: str) -> None:
         """
@@ -51,6 +54,9 @@ def create_environment() -> IEnvironment:
 
 
 class EnvironmentImpl(IEnvironment):
+    """
+    Implementation based on dict
+    """
     def __init__(self):
         self.env = dict()
 

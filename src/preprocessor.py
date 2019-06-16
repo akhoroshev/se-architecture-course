@@ -1,9 +1,11 @@
+import shlex
 from abc import ABC, abstractmethod
+from typing import List
+
+from parsec import string, letter, Value, spaces, none_of, many, eof, Parser, many1, digit
+
 from src.environment import IEnvironment
 from src.token import IToken, TokenDelimiter, TokenString
-
-from parsec import *
-import shlex
 
 
 class PreprocessorParseError(ValueError):
@@ -12,6 +14,9 @@ class PreprocessorParseError(ValueError):
 
 
 class IPreprocessor(ABC):
+    """
+    Interface for converting string content to token stream
+    """
     @abstractmethod
     def set_environment(self, environment: IEnvironment) -> None:
         pass
@@ -21,10 +26,9 @@ class IPreprocessor(ABC):
         pass
 
     @abstractmethod
-    def process(self, content: str) -> [IToken]:
+    def process(self, content: str) -> List[IToken]:
         """
         Function split input string and make substitutions if needed
-        :param content:
         """
         pass
 
@@ -38,6 +42,9 @@ def create_preprocessor() -> IPreprocessor:
 ##################
 
 class PreprocessorImpl(IPreprocessor):
+    """
+    Implementation based on parsec (python parser combinator library) library
+    """
     def __init__(self):
         self.m_environment = None
 
@@ -47,7 +54,8 @@ class PreprocessorImpl(IPreprocessor):
     def get_environment(self) -> IEnvironment:
         return self.m_environment
 
-    def process(self, content: str) -> [IToken]:
+    def process(self, content: str) -> List[IToken]:
+        content = content[:-1] if content.endswith('\n') else content
 
         def pure(value):
             """
@@ -72,7 +80,7 @@ class PreprocessorImpl(IPreprocessor):
         content_prs_comb = many(double_quotes_comb |
                                 single_quotes_comb |
                                 subst_tokens_comb ^ any_char_comb |
-                                space_eat_comb) < eof()
+                                space_eat_comb).ends_with(eof())
 
         parsed_tokens = content_prs_comb.parse(content)
         result = list()
@@ -89,7 +97,8 @@ class PreprocessorImpl(IPreprocessor):
         else:
             return str()
 
-    def collapse_tokens(self, tokens):
+    @staticmethod
+    def collapse_tokens(tokens):
         result = list()
         current = None
         for token in tokens:
