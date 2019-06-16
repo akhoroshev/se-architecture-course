@@ -24,13 +24,13 @@ class CliExecutor:
         """
         self.m_parser.add_command(command_factory, name, infix)
 
-    def set_default_command(self, command_constructor):
+    def set_default_command(self, command_constructor: Callable[[str, Any], ICommand]):
         """
         The default command if an unknown command has passed
         """
         self.m_parser.set_default_command(command_constructor)
 
-    def add_environment_variable(self, env, value):
+    def add_environment_variable(self, env: str, value: str):
         """
         Add env variable
         """
