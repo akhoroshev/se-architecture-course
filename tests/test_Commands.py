@@ -1,13 +1,13 @@
 import os
 from unittest import TestCase
 
+from src.commands import Cat
+from src.commands import Echo
+from src.commands import BinaryOperator
+from src.commands import Pwd
+from src.commands import Signal
+from src.commands import Wc
 from src.command import ICommand
-from src.commands.cat import Cat
-from src.commands.echo import Echo
-from src.commands.operators import BinaryOperator
-from src.commands.pwd import Pwd
-from src.commands.signal import Signal
-from src.commands.wc import Wc
 from src.stream import create_string_stream
 
 
