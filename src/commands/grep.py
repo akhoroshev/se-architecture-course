@@ -1,7 +1,8 @@
+import re
+from argparse import ArgumentParser
+
 from src.command import IFsCommand
 
-from argparse import ArgumentParser
-import re
 
 class GrepArgParseError(ValueError):
     def __init__(self, string):
@@ -36,6 +37,8 @@ class Grep(IFsCommand):
     def execute(self) -> None:
         try:
             parsed_args = self.parser.parse_args(list(self.m_args))
+            if parsed_args.A < 0:
+                raise GrepArgParseError(f'{self.m_name}: -1: invalid context length argument')
             if parsed_args.FILE:
                 for file in parsed_args.FILE:
                     print(self.handle_input(parsed_args, file), file=self.m_out_stream, flush=True, end='')
@@ -45,23 +48,23 @@ class Grep(IFsCommand):
             pass
 
     def handle_input(self, parsed_args, input_name=None):
-        def grep(handle):
-            re_flags = re.IGNORECASE if parsed_args.ignore_case else 0
-            re_pattern = " {} ".format(parsed_args.PATTERN[0]) if parsed_args.word_regexp else parsed_args.PATTERN[0]
-            result = list()
-            skip = 0
-            for line in handle:
-                if skip > 0:
-                    result.append(line)
-                    skip -= 1
-                    continue
-                if re.search(re_pattern, line, flags=re_flags):
-                    result.append(line)
-                    skip = parsed_args.A
-            return ''.join(result)
+        if not input_name:
+            return self.__grep(parsed_args, self.m_inp_stream)
+        with open(input_name, "r") as file:
+            return self.__grep(parsed_args, file)
 
-        if input_name:
-            with open(input_name, "r") as file:
-                return grep(file)
-        else:
-            return grep(self.m_inp_stream)
+    @staticmethod
+    def __grep(parsed_args, handle):
+        re_flags = re.IGNORECASE if parsed_args.ignore_case else 0
+        re_pattern = " {} ".format(parsed_args.PATTERN[0]) if parsed_args.word_regexp else parsed_args.PATTERN[0]
+        result = list()
+        skip = 0
+        for line in handle:
+            if skip > 0:
+                result.append(line)
+                skip -= 1
+                continue
+            if re.search(re_pattern, line, flags=re_flags):
+                result.append(line)
+                skip = parsed_args.A
+        return ''.join(result)
