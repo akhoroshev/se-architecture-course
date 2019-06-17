@@ -5,4 +5,4 @@ from .operators import BinaryOperator
 from .pwd import Pwd
 from .signal import Signal
 from .wc import Wc
-from .grep import Grep
+from .grep import Grep, GrepArgParseError, GrepExit

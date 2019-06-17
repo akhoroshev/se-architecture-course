@@ -14,6 +14,10 @@ class GrepExit(ValueError):
 
 
 class GrepArgParser(ArgumentParser):
+    """
+    Class with modified behaviour on error and exit.
+    Original error and exit methods in ArgumentParser stop the application with exit code.
+    """
     def error(self, message):
         raise GrepArgParseError(message)
 
@@ -22,6 +26,11 @@ class GrepArgParser(ArgumentParser):
 
 
 class Grep(IFsCommand):
+    """
+    Grep command.
+    Command line argument parsing implemented with python argparse library because
+    Argparse makes life easy by providing us a way to define the commonly used validations for command line arguments.
+    """
     def __init__(self, name, *args):
         super().__init__(name, *args)
         self.parser = GrepArgParser('Search for PATTERN in each FILE or standard input.')

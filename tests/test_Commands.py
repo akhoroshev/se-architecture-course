@@ -1,12 +1,7 @@
 import os
 from unittest import TestCase
 
-from src.commands import Cat
-from src.commands import Echo
-from src.commands import BinaryOperator
-from src.commands import Pwd
-from src.commands import Signal
-from src.commands import Wc
+from src.commands import *
 from src.command import ICommand
 from src.stream import create_string_stream
 
@@ -72,3 +67,40 @@ class TestCommands(TestCase):
         cmd.execute()
         o.seek(0, 0)
         self.assertEqual("       1       3      21\n", o.read())
+
+
+class TestGrepCommand(TestCase):
+    FILE = "FROM python:3.6-alpine\n" \
+           "\n" \
+           "COPY . '/app'\n" \
+           "WORKDIR '/app'\n" \
+           "\n" \
+           "RUN pip install -r requirements.txt\n" \
+           "\n" \
+           "CMD ['python3', 'bash.py']\n"
+
+    def test_negative_trailing_context(self):
+        cmd = Grep("grep", "-A", "-1", "pip")
+        i, o = TestCommands.prepare_streams(cmd, self.FILE)
+        self.assertRaises(GrepArgParseError, cmd.execute)
+
+    def test_normal_trailing_context(self):
+        cmd = Grep("grep", "-A", "2", "pip")
+        i, o = TestCommands.prepare_streams(cmd, self.FILE)
+        cmd.execute()
+        o.seek(0, 0)
+        self.assertEqual('\n'.join(self.FILE.splitlines()[-3:]) + '\n', o.read())
+
+    def test_ignore_case(self):
+        cmd = Grep("grep", "-i", "from python")
+        i, o = TestCommands.prepare_streams(cmd, self.FILE)
+        cmd.execute()
+        o.seek(0, 0)
+        self.assertEqual(self.FILE.splitlines()[0] + '\n', o.read())
+
+    def test_match_whole_words(self):
+        cmd = Grep("grep", "-i", "requirements.txt")
+        i, o = TestCommands.prepare_streams(cmd, self.FILE)
+        cmd.execute()
+        o.seek(0, 0)
+        self.assertEqual(self.FILE.splitlines()[-3] + '\n', o.read())
