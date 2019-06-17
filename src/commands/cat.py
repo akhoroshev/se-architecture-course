@@ -2,6 +2,9 @@ from src.command import ICommand
 
 
 class Cat(ICommand):
+    """
+    Cat command
+    """
     def execute(self) -> None:
         if self.m_args:
             for filename in self.m_args:

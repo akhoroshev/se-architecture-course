@@ -1,9 +1,13 @@
-from src.command import ICommand
 import subprocess
 from io import TextIOWrapper, BytesIO
 
+from src.command import ICommand
+
 
 class External(ICommand):
+    """
+    External command runner
+    """
     def execute(self) -> None:
         if self.m_inp_stream.isatty() and self.m_out_stream.isatty():
             self.std_std()

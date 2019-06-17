@@ -2,6 +2,9 @@ from src.command import ICommand
 
 
 class Stat:
+    """
+    Entry for holding statistic
+    """
     def __init__(self):
         self.n_lines = 0
         self.n_words = 0
